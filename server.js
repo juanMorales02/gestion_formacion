@@ -2,6 +2,8 @@ import express from "express";
 import * as dotenv from "dotenv";
 import cors from "cors";
 import morgan from "morgan";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import dbConnection from "./database.js";
 import { validateJWT } from "./middlewares/validateJWT.js";
@@ -10,6 +12,8 @@ import { routerCurso } from "./routes/cursos.routes.js";
 import { routerAprendiz } from "./routes/aprendices.routes.js";
 
 dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Representa el servidor de la aplicacion.
@@ -54,6 +58,11 @@ class Server {
     this.app.use("/api/cursos", validateJWT, routerCurso);
     this.app.use("/api/aprendices", validateJWT, routerAprendiz);
 
+    // Frontend compilado (carpeta public/ = el dist de Vite). Va DESPUES de las
+    // rutas /api para que nunca las tape; el router del front usa hash (#/login),
+    // asi que no hace falta una ruta comodin que devuelva index.html.
+    this.app.use(express.static(path.join(__dirname, "public")));
+
     // Ruta de cortesia para comprobar rapido que el servidor responde.
     // El nombre "/life" es un identificador y no se traduce; el mensaje si.
     this.app.use("/life", (req, res) => {
@@ -67,8 +76,8 @@ class Server {
       res.status(404).json({ msg: "La ruta solicitada no existe" });
     });
 
-    // Cualquier otra ruta tampoco existe: este servidor es solo API (el frontend
-    // vive aparte, en su propia carpeta, y se sirve por su cuenta).
+    // Cualquier otra ruta tampoco existe: no coincide ni con la API ni con un
+    // archivo de public/.
     this.app.use((req, res) => {
       res.status(404).json({ msg: "La ruta solicitada no existe" });
     });
